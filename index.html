@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reconocimiento de Dígitos KNN</title>
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+    <h1>Dibuja un dígito</h1>
+    <canvas id="canvas" width="128" height="128"></canvas>
+    <br>
+    <button id="predict-btn">Analizar</button>
+    <button id="clear-btn">Limpiar</button>
+
+    <div id="result"></div>
+
+    <div id="debug-output">
+        <h3>Imagen enviada al modelo (28x28)</h3>
+        <canvas id="debug-image" width="28" height="28"></canvas>
+    </div>
+    <script src="./js/main.js"></script>
+</body>
+</html>
