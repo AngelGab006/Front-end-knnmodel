@@ -128,7 +128,7 @@ predictBtn.addEventListener('click', async () => {
     debugImageCtx.putImageData(debugImageData, 0, 0);
 
     try {
-        const response = await fetch('http://localhost:5000/predict', {
+        const response = await fetch('https://back-end-knnmodel.onrender.com/predict', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ pixels: pixels })
