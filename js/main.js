@@ -6,7 +6,7 @@ const resultDiv = document.getElementById('result');
 const debugImageCanvas = document.getElementById('debug-image');
 const debugImageCtx = debugImageCanvas.getContext('2d');
 
-ctx.lineWidth = 10;
+ctx.lineWidth = 15; 
 ctx.lineCap = 'round';
 ctx.fillStyle = 'white';
 ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -62,19 +62,53 @@ clearBtn.addEventListener('click', () => {
 });
 
 predictBtn.addEventListener('click', async () => {
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const boundingBox = getBoundingBox(imageData.data, canvas.width, canvas.height);
+
+    if (boundingBox.x1 === canvas.width) {
+        resultDiv.textContent = 'Dibuja un número primero!';
+        return;
+    }
+
     const smallCanvas = document.createElement('canvas');
     smallCanvas.width = 28;
     smallCanvas.height = 28;
     const smallCtx = smallCanvas.getContext('2d');
-
-    smallCtx.drawImage(canvas, 0, 0, 28, 28);
     
+    smallCtx.fillStyle = 'white';
+    smallCtx.fillRect(0, 0, 28, 28);
+    
+    const croppedWidth = boundingBox.x2 - boundingBox.x1 + 1;
+    const croppedHeight = boundingBox.y2 - boundingBox.y1 + 1;
+
+    // Ajustamos targetSize a 20
+    const targetSize = 20;
+    const scale = Math.min(targetSize / croppedWidth, targetSize / croppedHeight);
+    
+    const scaledWidth = croppedWidth * scale;
+    const scaledHeight = croppedHeight * scale;
+
+    const offsetX = (28 - scaledWidth) / 2;
+    const offsetY = (28 - scaledHeight) / 2;
+    
+    smallCtx.drawImage(
+        canvas,
+        boundingBox.x1,
+        boundingBox.y1,
+        croppedWidth,
+        croppedHeight,
+        offsetX,
+        offsetY,
+        scaledWidth,
+        scaledHeight
+    );
+
     const smallImageData = smallCtx.getImageData(0, 0, 28, 28);
     const pixels = [];
     const debugPixels = []; 
 
     for (let i = 0; i < smallImageData.data.length; i += 4) {
-        const grayScaleValue = smallImageData.data[i]; 
+        const grayScaleValue = smallImageData.data[i];
         const invertedGrayScale = 255 - grayScaleValue;
 
         const normalizedPixel = invertedGrayScale / 255.0;
@@ -86,15 +120,15 @@ predictBtn.addEventListener('click', async () => {
     const debugImageData = debugImageCtx.createImageData(28, 28);
     for (let i = 0; i < debugPixels.length; i++) {
         const val = debugPixels[i];
-        debugImageData.data[i * 4 + 0] = val; // R
-        debugImageData.data[i * 4 + 1] = val; // G
-        debugImageData.data[i * 4 + 2] = val; // B
-        debugImageData.data[i * 4 + 3] = 255; // Alpha
+        debugImageData.data[i * 4 + 0] = val;
+        debugImageData.data[i * 4 + 1] = val;
+        debugImageData.data[i * 4 + 2] = val;
+        debugImageData.data[i * 4 + 3] = 255;
     }
     debugImageCtx.putImageData(debugImageData, 0, 0);
 
     try {
-        const response = await fetch('https://back-end-knnmodel.onrender.com/predict', {
+        const response = await fetch('http://localhost:5000/predict', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ pixels: pixels })
@@ -107,3 +141,28 @@ predictBtn.addEventListener('click', async () => {
         console.error('Error:', error);
     }
 });
+
+function getBoundingBox(pixels, width, height) {
+    let minX = width;
+    let minY = height;
+    let maxX = -1;
+    let maxY = -1;
+
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const r = pixels[(y * width + x) * 4];
+            const g = pixels[(y * width + x) * 4 + 1];
+            const b = pixels[(y * width + x) * 4 + 2];
+            
+            if (r < 255 || g < 255 || b < 255) { 
+                if (x < minX) minX = x;
+                if (y < minY) minY = y;
+                if (x > maxX) maxX = x;
+                if (y > maxY) maxY = y;
+            }
+        }
+    }
+    if (maxX === -1) return { x1: width, y1: height, x2: -1, y2: -1 };
+    
+    return { x1: minX, y1: minY, x2: maxX, y2: maxY };
+}
