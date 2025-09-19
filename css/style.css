@@ -50,3 +50,9 @@ button:hover {
     height: 112px;
     margin-top: 10px;
 }
+#pixel-matrix{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 1px;
+}

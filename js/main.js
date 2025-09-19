@@ -5,8 +5,9 @@ const clearBtn = document.getElementById('clear-btn');
 const resultDiv = document.getElementById('result');
 const debugImageCanvas = document.getElementById('debug-image');
 const debugImageCtx = debugImageCanvas.getContext('2d');
+const pixelMatrixDiv = document.getElementById('pixel-matrix'); // Get the new container
 
-ctx.lineWidth = 15; 
+ctx.lineWidth = 25; 
 ctx.lineCap = 'round';
 ctx.fillStyle = 'white';
 ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -59,6 +60,7 @@ clearBtn.addEventListener('click', () => {
     resultDiv.textContent = '';
     debugImageCtx.fillStyle = 'white';
     debugImageCtx.fillRect(0, 0, debugImageCanvas.width, debugImageCanvas.height);
+    pixelMatrixDiv.innerHTML = ''; // Clear the matrix
 });
 
 predictBtn.addEventListener('click', async () => {
@@ -81,7 +83,6 @@ predictBtn.addEventListener('click', async () => {
     const croppedWidth = boundingBox.x2 - boundingBox.x1 + 1;
     const croppedHeight = boundingBox.y2 - boundingBox.y1 + 1;
 
-    // Ajustamos targetSize a 20
     const targetSize = 20;
     const scale = Math.min(targetSize / croppedWidth, targetSize / croppedHeight);
     
@@ -127,20 +128,45 @@ predictBtn.addEventListener('click', async () => {
     }
     debugImageCtx.putImageData(debugImageData, 0, 0);
 
+    // Generate and display the pixel matrix
+    const imageMatrix = [];
+    for (let i = 0; i < 28; i++) {
+        imageMatrix.push(debugPixels.slice(i * 28, (i + 1) * 28));
+    }
+    displayPixelMatrix(imageMatrix);
+
     try {
-        const response = await fetch('https://back-end-knnmodel.onrender.com/predict', {
+        const response = await fetch('http://localhost:5000/predict', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ pixels: pixels })
         });
 
         const data = await response.json();
-        resultDiv.textContent = `La predicción es: ${data.prediction}`;
+        const certainty = data.certainty[data.prediction] * 100;
+        resultDiv.textContent = `Predicción: ${data.prediction} | Certeza: ${certainty.toFixed(2)}%`;
+        
     } catch (error) {
         resultDiv.textContent = `Error: No se pudo conectar con el servidor.`;
         console.error('Error:', error);
     }
 });
+
+// New function to display the pixel matrix
+function displayPixelMatrix(matrix) {
+    let tableHTML = '<table>';
+    matrix.forEach(row => {
+        tableHTML += '<tr>';
+        row.forEach(cell => {
+            const opacity = cell / 255;
+            const color = 255 - cell;
+            tableHTML += `<td style="background-color: rgb(${color}, ${color}, ${color}); color: ${cell > 128 ? 'black' : 'white'};">${cell}</td>`;
+        });
+        tableHTML += '</tr>';
+    });
+    tableHTML += '</table>';
+    pixelMatrixDiv.innerHTML = tableHTML;
+}
 
 function getBoundingBox(pixels, width, height) {
     let minX = width;
